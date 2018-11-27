@@ -10,26 +10,18 @@ axios(startUrl)
         $('.url').each((i, el) => {
             urls.push(`https://${$(el).children().first().text().trim()}`);
         });
-        puppeteer
-            .launch()
-            .then(browser => {
-                return browser.newPage();
-            })
-            .then(page => {
-                return urls.map(url => {
-                    page.goto(url).then(() => {
-                        return page.content();
-                    }).catch(err => {
-                        console.log(err);
-                    });
-                });
-            })
-            .then(html => {
-                console.log(html);
-            })
-            .catch(err => {
-                console.log(err);
-            });
+
+        (async () => {
+            const browser = await puppeteer.launch();
+            const page = await browser.newPage();
+
+            for (let i = 0; i < urls.length; i++) {
+                await page.goto(urls[i], { waitUntil: 'load' });
+                console.log(page);
+            }
+
+            await browser.close();
+        })();
     }).catch(err => {
         console.log(err);
     });
