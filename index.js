@@ -22,13 +22,14 @@ axios(startUrl).then(async response => {
         for (let i = 0; i < urls.length; i++) {
             await page.goto(urls[i], { waitUntil: 'load' });
             const pageData = await scrape(page);
+            console.log(pageData)
             results.push(pageData);
         }
 
         await browser.close();
-        console.log(results);
+        //console.log(results);
     } catch (err) {
-        console.log("Puppeteer Error occurred!");
+        console.log(`Puppeteer Error occurred: ${err}`);
     }
 }).catch(err => {
     console.log(err);
@@ -36,36 +37,31 @@ axios(startUrl).then(async response => {
 
 scrape = async (page) => {
     try {
-        return await page.evaluate(async () => {
-            const ignoreTags = ["style", "script"];
-            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
+        return await page.evaluate(() => {
+            const IGNORED_TAGS = ['HTML', 'HEAD', 'META', 'SCRIPT', 'STYLE', 'NOSCRIPT', 'LINK', 'IFRAME', 'INPUT', 'OPTION'];
             const styleList = [];
-
-            while ((node = walker.nextNode()) !== null) {
-                const parent = node.parentNode.tagName;
-
-                if (ignoreTags.includes(parent)) {
+            const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_ELEMENT);
+            
+            while(walker.nextNode()) {
+                if (IGNORED_TAGS.includes(walker.currentNode.nodeName))
                     continue;
-                }
-                
-                const styles = getComputedStyle(node);
 
-                if (!styles) {
-                    continue;
-                }
+                const styles = getComputedStyle(walker.currentNode);
 
-                styleList.push(styles);
+                styleList.push({
+                    [walker.currentNode.nodeName]: {
+                        background: styles.getPropertyValue('background'),
+                        backgroundColor: styles.getPropertyValue('background-color'),
+                        color: styles.getPropertyValue('color')
+                    }
+                })
+                //console.log(walker.currentNode.nodeName + ": " + styles.getPropertyValue('color'));
             }
-            console.log(styleList);
             return styleList;
         });        
     } catch (err) {
         return new Error(`Error occurred scraping page data: ${err}`);
     }
-}
-
-parseBody = body => {
-    console.log(body);
 }
 
 pageLogToConsole = msg => {
